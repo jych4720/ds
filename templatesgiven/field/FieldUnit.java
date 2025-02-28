@@ -34,7 +34,7 @@ public class FieldUnit implements IFieldUnit {
 
     private static final int buffsize = 2048;
     private int timeout = 50000;
-    private List<Float> receivedMessages;
+    private List<MessageInfo> receivedMessages;
     private List<Float> movingAverages;
 
 
@@ -47,7 +47,7 @@ public class FieldUnit implements IFieldUnit {
     @Override
     public void addMessage (MessageInfo msg) {
       /* TODO: Save received message in receivedMessages */
-	receivedMessages.add(msg.getMessage());
+	receivedMessages.add(msg);
     }
 
     @Override
@@ -55,12 +55,13 @@ public class FieldUnit implements IFieldUnit {
         /* TODO: Compute SMA and store values in a class attribute */
         movingAverages.clear(); 
 	for (int i = 0; i < receivedMessages.size(); i++) {
+	    float value = receivedMessages.get(i).getMessage();
             if (i < k) {
-                movingAverages.add(receivedMessages.get(i)); 
+                movingAverages.add(value); 
             } else {
                 float sum = 0;
                 for (int j = i - k + 1; j <= i; j++) {
-                    sum += receivedMessages.get(j);
+                    sum += receivedMessages.get(j).getMessage();
                 }
                 movingAverages.add(sum / k);
             }
@@ -98,7 +99,13 @@ public class FieldUnit implements IFieldUnit {
 	    try {
 	        socket.receive(packet);
 	        String receivedData = new String(packet.getData(), 0, packet.getLength());
-	        MessageInfo msg = new MessageInfo(receivedData);
+		MessageInfo msg;
+	        try {
+                    msg = new MessageInfo(receivedData);
+                } catch (Exception e) {
+		    e.printStackTrace();
+		    return;
+                }
 	        addMessage(msg);
 	        totalMessagesReceived++;
 	        if (totalMessagesReceived >= msg.getTotalMessages()) {
@@ -197,7 +204,7 @@ public class FieldUnit implements IFieldUnit {
 
       /* TODO: Now re-initialise data structures for next time */
 	int totalMessages = receivedMessages.size();
-        int expectedMessages = receivedMessages.isEmpty() ? 0 : (int) receivedMessages.get(0);  // Get the total expected from the first message
+        int expectedMessages = receivedMessages.isEmpty() ? 0 : receivedMessages.get(0).getTotalMessages();
 
         int missingMessages = expectedMessages - totalMessages;
 
